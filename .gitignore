@@ -1,0 +1,13 @@
+# 系统文件
+Thumbs.db
+Desktop.ini
+
+# IDE / 编辑器
+.vscode/
+.idea/
+
+# 依赖（本项目无 node_modules，但保留以防后续添加）
+node_modules/
+
+# Claude 内部文件不需要上传
+.claude/

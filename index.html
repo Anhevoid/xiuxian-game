@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>修仙 · 一念成仙</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game">
+
+    <!-- 顶部状态栏 -->
+    <header id="topbar">
+      <div class="char">
+        <div class="realm" id="realmLabel">练气期初期</div>
+        <div class="progress">
+          <div class="bar" id="xiuweiBar"></div>
+          <span class="progress-text" id="xiuweiText">0 / 100</span>
+        </div>
+      </div>
+      <div class="stats">
+        <span class="stat">🪙 <b id="lingshiText">0</b></span>
+        <span class="stat hp">❤️ <b id="hpText">100/100</b></span>
+        <div class="hpbar"><div class="bar" id="hpBar"></div></div>
+      </div>
+    </header>
+
+    <main>
+      <!-- 左：洞府修炼 -->
+      <section class="cult-panel">
+        <h2>🏔 洞府</h2>
+        <div class="cult-info">
+          <p>修炼速度：<b id="cultRateText">2/秒</b></p>
+          <p>当前修为：<b id="xiuweiText2">0</b></p>
+        </div>
+        <button id="meditateBtn" class="big-btn meditate">🧘 打坐吐纳 <small>(空格)</small></button>
+        <button id="breakBtn" class="big-btn break">✨ 突破境界</button>
+        <div class="attrs">
+          <span>⚔️ 攻 <b id="atkText">10</b></span>
+          <span>🛡️ 防 <b id="defText">5</b></span>
+        </div>
+        <div class="tech-line">📕 功法：<b id="techText">无</b></div>
+      </section>
+
+      <!-- 右：功能标签 -->
+      <section class="tab-panel">
+        <nav class="tabs">
+          <button class="tab active" data-tab="zone">⚔️ 秘境</button>
+          <button class="tab" data-tab="shop">🏪 集市</button>
+          <button class="tab" data-tab="alchemy">⚗️ 炼丹</button>
+          <button class="tab" data-tab="inventory">🎒 洞府</button>
+        </nav>
+        <div id="tabContent"></div>
+      </section>
+    </main>
+
+    <!-- 底部日志 -->
+    <footer id="logPanel">
+      <div class="log-title">🎐 仙途纪事</div>
+      <div id="log"></div>
+    </footer>
+  </div>
+
+  <!-- 飞升胜利遮罩 -->
+  <div id="victory" class="overlay hidden">
+    <div class="modal">
+      <h1>🌅 飞升成仙</h1>
+      <p id="victoryText"></p>
+      <button id="restartBtn">🔄 轮回重修</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

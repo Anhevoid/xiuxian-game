@@ -1,0 +1,384 @@
+/* ============ 修仙小游戏 · 水墨主题 ============ */
+:root{
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --panel:     #1c2128;
+  --panel2:    #22272e;
+  --border:    #30363d;
+  --ink:       #e6edf3;
+  --muted:     #8b949e;
+  --jade:      #4ec9b0;   /* 青玉绿 */
+  --jade-dim:  #2f6b5e;
+  --gold:      #e3b341;   /* 金 */
+  --crimson:   #f85149;   /* 朱砂 */
+  --purple:    #a371f7;
+  --shadow:    0 2px 10px rgba(0,0,0,.5);
+}
+
+*{ box-sizing: border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{
+  font-family: "PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(78,201,176,.06), transparent 40%),
+    radial-gradient(circle at 85% 90%, rgba(227,179,65,.05), transparent 40%),
+    var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#game{
+  max-width: 1100px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+}
+
+/* ---------- 顶部状态栏 ---------- */
+#topbar{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(180deg, var(--panel), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+}
+.char{ flex: 1; min-width: 0; }
+.realm{
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  text-shadow: 0 0 8px rgba(227,179,65,.3);
+}
+.progress{
+  position: relative;
+  height: 22px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  max-width: 420px;
+}
+.progress .bar{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--jade-dim), var(--jade));
+  border-radius: 11px;
+  transition: width .2s linear;
+}
+.progress-text{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--ink);
+  text-shadow: 0 1px 2px #000;
+}
+.stats{ display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+.stat{ font-size: 15px; color: var(--muted); }
+.stat b{ color: var(--ink); }
+.stat.hp b{ color: var(--crimson); }
+.hpbar{
+  width: 120px;
+  height: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.hpbar .bar{
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #b3261e, var(--crimson));
+  transition: width .2s linear;
+}
+
+/* ---------- 主区两栏 ---------- */
+main{
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 12px;
+  flex: 1;
+}
+
+/* 左：洞府 */
+.cult-panel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  height: fit-content;
+}
+.cult-panel h2{
+  font-size: 16px;
+  color: var(--jade);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.cult-info p{ font-size: 13px; color: var(--muted); margin: 4px 0; }
+.cult-info b{ color: var(--ink); }
+.big-btn{
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform .08s, filter .15s, opacity .15s;
+}
+.big-btn small{ font-weight: 400; opacity: .8; font-size: 11px; }
+.big-btn:active{ transform: scale(.97); }
+.big-btn:disabled{ opacity: .4; cursor: not-allowed; }
+.meditate{ background: linear-gradient(135deg, var(--jade-dim), var(--jade)); }
+.meditate:not(:disabled):hover{ filter: brightness(1.1); }
+.break{ background: linear-gradient(135deg, #6b4a1e, var(--gold)); color:#1a1206; }
+.break:not(:disabled):hover{ filter: brightness(1.08); }
+.attrs{
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+}
+.attrs b{ color: var(--ink); }
+.tech-line{
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-all;
+}
+.tech-line b{ color: var(--purple); }
+
+/* 右：标签面板 */
+.tab-panel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.tabs{
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.tab{
+  flex: 1;
+  padding: 11px 8px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.tab:hover{ color: var(--ink); background: var(--panel2); }
+.tab.active{ color: var(--jade); border-bottom-color: var(--jade); }
+#tabContent{ padding: 14px; overflow-y: auto; min-height: 320px; }
+
+/* ---------- 通用按钮 ---------- */
+.tab-btn{
+  background: var(--panel2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: filter .15s, transform .08s, opacity .15s;
+  white-space: nowrap;
+}
+.tab-btn:not(:disabled):hover{ filter: brightness(1.15); }
+.tab-btn:not(:disabled):active{ transform: scale(.96); }
+.tab-btn:disabled{ opacity: .35; cursor: not-allowed; }
+.danger-btn{ border-color: #6e2d2d; color: var(--crimson); }
+
+/* ---------- 秘境 ---------- */
+.zone-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.zone-card{
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+.zone-card.locked{ opacity: .5; }
+.zone-title{
+  font-weight: 700;
+  color: var(--jade);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.mon-list{ display: flex; flex-direction: column; gap: 6px; }
+.mon-btn{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+.mon-name{ font-weight: 700; color: var(--ink); }
+.mon-stat{ font-size: 11px; color: var(--muted); }
+.mon-reward{ font-size: 11px; color: var(--gold); }
+.lock-note{ font-size: 12px; color: var(--muted); padding: 8px 0; }
+
+/* ---------- 战斗 ---------- */
+.battle{
+  background: linear-gradient(180deg, #2a1414, var(--bg2));
+  border: 1px solid #6e2d2d;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.battle-foe, .battle-self{ flex: 1; min-width: 130px; }
+.battle-self{ text-align: right; }
+.fname{ font-weight: 700; margin-bottom: 4px; }
+.battle-foe .fname{ color: var(--crimson); }
+.battle-self .fname{ color: var(--jade); }
+.battle .hpbar{ width: 100%; height: 16px; margin: 4px 0; }
+.battle .hpbar .bar.foe{ background: linear-gradient(90deg,#6e2d2d,var(--crimson)); }
+.battle .hpbar .bar.self{ background: linear-gradient(90deg,var(--jade-dim),var(--jade)); }
+.hptext{ font-size: 12px; color: var(--muted); }
+.vs{ font-size: 22px; }
+.flee-btn{ background: #3a2a2a; }
+
+/* ---------- 商店 / 炼丹 / 背包 ---------- */
+.shop-sec, .inv-sec{ margin-bottom: 16px; }
+.shop-sec h3, .inv-sec h3{
+  font-size: 14px;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.item-list{ display: flex; flex-direction: column; gap: 6px; }
+.item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.item-info{ display: flex; flex-direction: column; min-width: 0; }
+.item-info b{ font-size: 13px; }
+.item-info span{ font-size: 11px; color: var(--muted); }
+.alch-mats, .alch-note, .inv-sec p{
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.inv-sec.danger{ border-top: 1px dashed var(--border); padding-top: 12px; }
+
+/* ---------- 日志 ---------- */
+#logPanel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+.log-title{ font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+#log{
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.logline{ color: var(--ink); opacity: .85; }
+.logline:nth-child(odd){ opacity: .65; }
+
+/* ---------- 胜利遮罩 ---------- */
+.overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.overlay.hidden{ display: none; }
+.modal{
+  background: linear-gradient(180deg, var(--panel), var(--bg2));
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 36px 48px;
+  text-align: center;
+  max-width: 90%;
+  box-shadow: 0 0 40px rgba(227,179,65,.3);
+}
+.modal h1{ color: var(--gold); font-size: 32px; margin-bottom: 16px; }
+.modal p{ color: var(--ink); margin-bottom: 24px; font-size: 15px; }
+.modal button{
+  padding: 10px 24px;
+  font-size: 15px;
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #1a1206;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modal button:hover{ filter: brightness(1.1); }
+
+/* ---------- 浮动数字 ---------- */
+.float-text{
+  position: fixed;
+  transform: translateX(-50%);
+  color: var(--jade);
+  font-weight: 700;
+  font-size: 18px;
+  pointer-events: none;
+  z-index: 50;
+  text-shadow: 0 0 8px rgba(78,201,176,.6);
+  animation: floatUp .8s ease-out forwards;
+}
+@keyframes floatUp{
+  0%   { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -40px); }
+}
+
+/* ---------- 滚动条 ---------- */
+::-webkit-scrollbar{ width: 8px; height: 8px; }
+::-webkit-scrollbar-track{ background: var(--bg); }
+::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--muted); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 720px){
+  main{ grid-template-columns: 1fr; }
+  #topbar{ flex-direction: column; align-items: stretch; }
+  .stats{ justify-content: space-between; }
+}
