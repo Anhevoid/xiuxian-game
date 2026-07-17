@@ -11,3 +11,4 @@ node_modules/
 
 # Claude 内部文件不需要上传
 .claude/
+CLAUDE.md
