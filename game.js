@@ -45,7 +45,7 @@ const lingshiPerSec = () => {
 };
 function breakthroughChance(s){ return 0.9; }  // 小境界突破：高成功率
 function majorBreakChance(s){ return Math.max(0.3, Math.min(0.65, 0.65 - realmOf(s) * 0.03)); } // 大境界突破：较低成功率
-function alchemyChance(){ return Math.min(0.95, 0.6 + realmOf(state.sub) * 0.04); }
+function alchemyChance(){ return Math.min(0.95, 0.6 + realmOf(state.sub) * 0.04 + (sectBonus().alch || 0)); }
 
 /* ---------- 功法 ---------- */
 const TECHNIQUES = [
@@ -91,6 +91,20 @@ const TREASURES = [
 ];
 const TREASURE_DROP_CHANCE = 0.08;       // 强怪(vIdx=2)掉落概率
 const TREASURE_DROP_ORDER  = ['tr_fire','tr_vajra','tr_basin']; // 按秘境层级递进
+
+/* ---------- 宗门 ---------- */
+const SECTS = [
+  { id:'sect_sword',    name:'万剑宗', icon:'⚔️', desc:'剑修 · 战斗伤害 +15%',                       bonus:{dmg:0.15} },
+  { id:'sect_pill',     name:'药王谷', icon:'⚗️', desc:'丹修 · 炼丹成功率 +15%、修为丹效果 +50%',    bonus:{alch:0.15, pillXiuwei:0.50} },
+  { id:'sect_talisman', name:'天机阁', icon:'📜', desc:'符修 · 修炼速度 +15%',                       bonus:{cult:0.15} },
+  { id:'sect_body',     name:'玄武宗', icon:'🛡️', desc:'体修 · 气血上限 +20%、防御 +10%',            bonus:{maxhp:0.20, def:0.10} },
+];
+const SECT_UNLOCK_SUB  = 4;          // 筑基期可加入
+const SECT_SWITCH_BASE = 500000;     // 转宗基础灵石
+function sectBonus(){ return state.sect ? (SECTS.find(s=>s.id===state.sect.id)||{}).bonus || {} : {}; }
+// 占位（Task 3 替换为真实实现，避免 joinSect 调用时 ReferenceError）
+const BOUNTY_REFRESH_MS = 30*60*1000;
+function generateBounties(){ return []; }
 
 /* ---------- 秘境 / 妖兽 ---------- */
 const ZONE_NAMES = ['后山密林','落云谷','幽冥沼泽','万妖林','焚天火山','冰魄雪原','九幽深渊','天魔域','混沌海'];
@@ -141,11 +155,15 @@ function newState(){
     equip: { weapon:null, armor:null, treasure:null },
     inv: { herb:0, core:0, huiqi:1, xiuwei:0, tupo:0 },
     treasures: [],
+    sect: null,
+    bounties: [],
+    bountyRefreshAt: 0,
+    bountyRound: 0,
     tupoBuff: false,
     debuff: null, // 走火入魔：{ until: ms, cultMult: 0.5 }
     lastMeditate: 0,
     lastSave: Date.now(),
-    stats: { kills:0, deaths:0, breakthroughs:0, meditations:0 },
+    stats: { kills:0, deaths:0, breakthroughs:0, meditations:0, bounties:0 },
     won: false,
     activeTab: 'zone',
     shopSubtab: 'tech',
@@ -172,6 +190,7 @@ function effectiveCultMult(){
   let m = 1;
   for (const t of ownedTechniques()) m += t.cultBonus;
   m += (treasureBonus().cult || 0);
+  m += (sectBonus().cult || 0);
   return m;
 }
 const cultRate    = () => {
@@ -183,8 +202,8 @@ const cultRate    = () => {
   return base;
 };
 const playerAtk   = () => Math.round((baseAtk(state.sub) + ((WEAPONS.find(x=>x.id===state.equip.weapon)||{}).atk || 0)) * (1 + (treasureBonus().atk || 0)));
-const playerDef   = () => Math.round((baseDef(state.sub) + ((ARMORS.find(x=>x.id===state.equip.armor)||{}).def || 0)) * (1 + (treasureBonus().def || 0)));
-const playerMaxHp = () => Math.round(baseMaxHp(state.sub) * (1 + (treasureBonus().maxhp || 0)));
+const playerDef   = () => Math.round((baseDef(state.sub) + ((ARMORS.find(x=>x.id===state.equip.armor)||{}).def || 0)) * (1 + (treasureBonus().def || 0) + (sectBonus().def || 0)));
+const playerMaxHp = () => Math.round(baseMaxHp(state.sub) * (1 + (treasureBonus().maxhp || 0) + (sectBonus().maxhp || 0)));
 
 /* ---------- 数字格式 ---------- */
 function fmt(n){
@@ -224,7 +243,11 @@ function load(){
     state.inv   = Object.assign({herb:0,core:0,huiqi:0,xiuwei:0,tupo:0}, s.inv || {});
     state.equip = Object.assign({weapon:null,armor:null,treasure:null}, s.equip || {});
     state.treasures = Array.isArray(s.treasures) ? s.treasures.slice() : [];
-    state.stats = Object.assign({kills:0,deaths:0,breakthroughs:0,meditations:0}, s.stats || {});
+    state.sect = (s.sect && s.sect.id) ? { id:s.sect.id, contribution:s.sect.contribution||0, switches:s.sect.switches||0 } : null;
+    state.bounties = Array.isArray(s.bounties) ? s.bounties : [];
+    state.bountyRefreshAt = s.bountyRefreshAt || 0;
+    state.bountyRound = s.bountyRound || 0;
+    state.stats = Object.assign({kills:0,deaths:0,breakthroughs:0,meditations:0,bounties:0}, s.stats || {});
     state.debuff = (s.debuff && typeof s.debuff.until === 'number') ? s.debuff : null;
     state.shopSubtab = s.shopSubtab || 'tech';
     // 离线收益
@@ -384,7 +407,8 @@ function startBattle(z, v){
 }
 function battleRound(){
   const b = battleState; if (!b) return;
-  const pd = dmgCalc(playerAtk(), b.mon.def);
+  const pdRaw = dmgCalc(playerAtk(), b.mon.def);
+  const pd = Math.round(pdRaw * (1 + (sectBonus().dmg || 0)));
   b.monHp -= pd;
   const ls = treasureBonus().lifesteal || 0;
   if (ls > 0 && state.hp < playerMaxHp()){
@@ -499,7 +523,7 @@ function usePill(id){
   if ((state.inv[id] || 0) <= 0) return;
   state.inv[id]--;
   if (id === 'huiqi'){ state.hp = playerMaxHp(); log('🩸 服下回血丹，气血充盈。'); }
-  else if (id === 'xiuwei'){ const g = pillXiuwei(state.sub); state.xiuwei += g; log(`✨ 服下修为丹，修为 +${fmt(g)}。`); }
+  else if (id === 'xiuwei'){ const g = Math.round(pillXiuwei(state.sub) * (1 + (sectBonus().pillXiuwei || 0))); state.xiuwei += g; log(`✨ 服下修为丹，修为 +${fmt(g)}。`); }
   else if (id === 'tupo'){ state.tupoBuff = true; log('⚡ 服下突破丹，下次突破成功率提升。'); }
   save();
 }
@@ -508,6 +532,29 @@ function equipTreasure(id){
   const t = TREASURES.find(x=>x.id===id);
   if (state.equip.treasure === id){ state.equip.treasure = null; log(`📿 卸下法宝 ${t.name}`); }
   else { state.equip.treasure = id; log(`📿 装备法宝 ${t.name}`); }
+  refreshStats(); renderTab(); save();
+}
+function joinSect(id){
+  if (state.sect) return;
+  if (state.sub < SECT_UNLOCK_SUB){ log(`🏯 需达到 ${realmName(SECT_UNLOCK_SUB)} 方可拜入宗门。`); return; }
+  const s = SECTS.find(x=>x.id===id);
+  if (!s) return;
+  state.sect = { id, contribution:0, switches:0 };
+  state.bounties = generateBounties();          // Task 3 定义；此时若未定义则先返回占位
+  state.bountyRefreshAt = Date.now() + BOUNTY_REFRESH_MS;
+  log(`🏯 拜入 ${s.name}，${s.desc}！`);
+  refreshStats(); renderTab(); save();
+}
+function switchSect(id){
+  if (!state.sect || state.sect.id === id) return;
+  const times = state.sect.switches || 0;
+  const cost = Math.round(SECT_SWITCH_BASE * Math.pow(2, times));
+  if (state.lingshi < cost){ log(`🏯 转宗需灵石 ${fmt(cost)}，不足！`); return; }
+  state.lingshi -= cost;
+  state.sect.id = id;
+  state.sect.switches = times + 1;
+  const s = SECTS.find(x=>x.id===id);
+  log(`🏯 转投 ${s.name}，花费灵石 ${fmt(cost)}。${s.desc}`);
   refreshStats(); renderTab(); save();
 }
 
@@ -590,6 +637,7 @@ function refreshTabButtons(){
   else if (t === 'shop') refreshShopBtns();
   else if (t === 'alchemy')  refreshAlchemyBtns();
   else if (t === 'inventory')refreshInventoryBtns();
+  else if (t === 'sect') refreshSectBtns();
 }
 function refreshZoneBtns(){
   document.querySelectorAll('#tabContent [data-action="fight"]').forEach(b => {
@@ -632,6 +680,16 @@ function refreshInventoryBtns(){
     b.disabled = (state.inv[b.dataset.id] || 0) <= 0;
   });
 }
+function refreshSectBtns(){
+  document.querySelectorAll('#tabContent [data-action="join-sect"]').forEach(b => {
+    b.disabled = !!state.sect || state.sub < SECT_UNLOCK_SUB;
+  });
+  document.querySelectorAll('#tabContent [data-action="switch-sect"]').forEach(b => {
+    const times = (state.sect && state.sect.switches) || 0;
+    const cost = Math.round(SECT_SWITCH_BASE * Math.pow(2, times));
+    b.disabled = !state.sect || state.lingshi < cost;
+  });
+}
 
 /* ---------- 渲染：各面板 ---------- */
 function renderTab(){
@@ -640,6 +698,7 @@ function renderTab(){
   else if (state.activeTab === 'shop')   c.innerHTML = renderShop();
   else if (state.activeTab === 'alchemy')c.innerHTML = renderAlchemy();
   else if (state.activeTab === 'inventory') c.innerHTML = renderInventory();
+  else if (state.activeTab === 'sect')   c.innerHTML = renderSect();
   refreshTabButtons();
 }
 function renderBattleUI(){
@@ -805,6 +864,40 @@ function renderInventory(){
   h += '<button class="tab-btn danger-btn" data-action="reset">🔄 散功重修</button></div>';
   return h;
 }
+function renderSect(){
+  let h = '';
+  if (!state.sect){
+    if (state.sub < SECT_UNLOCK_SUB) h += `<div class="lock-note">需达到 ${realmName(SECT_UNLOCK_SUB)} 方可拜入宗门。</div>`;
+    h += '<div class="zone-grid">';
+    for (const s of SECTS){
+      h += `<div class="zone-card"><div class="zone-title">${s.icon} ${s.name}</div>
+        <div class="alch-mats" style="margin-bottom:8px">${s.desc}</div>
+        <button class="tab-btn" data-action="join-sect" data-id="${s.id}" ${state.sub<SECT_UNLOCK_SUB?'disabled':''}>拜入</button></div>`;
+    }
+    h += '</div>';
+    return h;
+  }
+  const s = SECTS.find(x=>x.id===state.sect.id);
+  h += `<div class="inv-sec"><h3>${s.icon} ${s.name}</h3>
+    <p>${s.desc}　|　宗门贡献：<b style="color:var(--gold-bright)">${fmt(state.sect.contribution)}</b></p></div>`;
+  // 转宗
+  h += '<div class="inv-sec"><h3>🔄 转投他宗</h3><div class="zone-grid">';
+  for (const s2 of SECTS){
+    if (s2.id === s.id) continue;
+    const times = state.sect.switches || 0;
+    const cost = Math.round(SECT_SWITCH_BASE * Math.pow(2, times));
+    h += `<div class="zone-card"><div class="zone-title">${s2.icon} ${s2.name}</div>
+      <div class="alch-mats" style="margin-bottom:8px">${s2.desc}</div>
+      <button class="tab-btn" data-action="switch-sect" data-id="${s2.id}">💎 ${fmt(cost)}</button></div>`;
+  }
+  h += '</div></div>';
+  h += renderBountyBoard();   // Task 3 实现；Task 2 中占位返回 ''
+  h += renderSectShop();      // Task 4 实现；Task 2 中占位返回 ''
+  return h;
+}
+// 占位（Task 3/4 替换为真实实现）
+function renderBountyBoard(){ return ''; }
+function renderSectShop(){ return ''; }
 
 /* ---------- 胜利 ---------- */
 function showVictory(){
@@ -957,6 +1050,8 @@ function init(){
     else if (a === 'craft')      craft(btn.dataset.id);
     else if (a === 'use-pill')   usePill(btn.dataset.id);
     else if (a === 'equip-treasure') equipTreasure(btn.dataset.id);
+    else if (a === 'join-sect')   { joinSect(btn.dataset.id); renderTab(); refreshStats(); return; }
+    else if (a === 'switch-sect') { switchSect(btn.dataset.id); renderTab(); refreshStats(); return; }
     else if (a === 'shop-subtab'){ state.shopSubtab = btn.dataset.sub; renderTab(); refreshStats(); return; }
     else if (a === 'save')       { save(); log('💾 已保存'); refreshStats(); return; }
     else if (a === 'reset')      { resetGame(); return; }

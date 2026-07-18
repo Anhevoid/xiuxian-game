@@ -70,4 +70,28 @@ const atkNoTr = (()=>{ t.state.equip.treasure=null; const v=t.playerAtk(); t.sta
 assert(t.playerAtk()===Math.round(atkNoTr*1.2), '玄火鉴攻击 +20%');
 t.state.treasures=[]; t.state.equip.treasure=null;
 
+// 宗门
+t.state.sect = null; t.state.sub = 4;
+assert(sectBonusEmpty(), '无宗门 sectBonus 为空');
+function sectBonusEmpty(){ return JSON.stringify(t.sectBonus())==='{}'; }
+t.joinSect('sect_sword');
+assert(t.state.sect && t.state.sect.id==='sect_sword', '加入万剑宗');
+assert(Math.abs(t.sectBonus().dmg-0.15)<1e-9, '万剑宗 dmg=0.15');
+t.state.lingshi = 0;
+t.state.sect.switches = 0;
+// 转宗费用 500000，灵石不足应保持原宗门
+t.switchSect('sect_body');
+assert(t.state.sect.id==='sect_sword', '灵石不足不可转宗');
+t.state.lingshi = 1000000;
+t.switchSect('sect_body');
+assert(t.state.sect.id==='sect_body', '灵石足够可转宗到玄武宗');
+assert(t.state.lingshi === 500000, '转宗扣 500000 灵石');
+assert(t.state.sect.switches===1, 'switches=1');
+// 玄武宗 maxhp/def 加成
+assert(Math.abs(t.sectBonus().maxhp-0.20)<1e-9 && Math.abs(t.sectBonus().def-0.10)<1e-9, '玄武宗 bonus');
+// 天机阁修炼加成
+t.state.lingshi = 1e9; t.switchSect('sect_talisman');
+assert(Math.abs(t.effectiveCultMult() - (1 + 0.15))<1e-9 || t.effectiveCultMult()===1.15, '天机阁修炼 +15%');
+t.state.sect = null; t.state.sub = 0; t.state.lingshi = 0;
+
 console.log('SMOKE OK: '+(typeof process!=='undefined'?process.argv[1]:'smoke'));
