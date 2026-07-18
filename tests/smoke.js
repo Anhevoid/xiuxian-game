@@ -94,4 +94,39 @@ t.state.lingshi = 1e9; t.switchSect('sect_talisman');
 assert(Math.abs(t.effectiveCultMult() - (1 + 0.15))<1e-9 || t.effectiveCultMult()===1.15, '天机阁修炼 +15%');
 t.state.sect = null; t.state.sub = 0; t.state.lingshi = 0;
 
+// 悬赏
+t.state.sect = { id:'sect_sword', contribution:0, switches:0 };
+t.state.sub = 4; t.state.bountyRound = 0;
+const bs = t.generateBounties();
+assert(Array.isArray(bs) && bs.length===4, 'generateBounties 返回 4 条');
+assert(bs.every(b=>b.target>0 && !b.done && !b.claimed), '初始悬赏未完成未领取');
+// 进度推进：把第一条设为 kill 类型并填满
+bs[0].type='kill'; bs[0].zone=1; bs[0].target=2; bs[0].progress=0;
+t.state.bounties = bs;
+t.bountyProgress('kill', 1, 1);
+assert(t.state.bounties[0].progress===1 && !t.state.bounties[0].done, 'kill 进度+1 未满');
+t.bountyProgress('kill', 1, 1);
+assert(t.state.bounties[0].done===true, 'kill 进度满 done=true');
+t.bountyProgress('kill', 1, 99); // zone 不匹配不应推进其它
+// 不同 zone 不推进
+bs[0].zone=1; bs[0].done=false; bs[0].progress=0;
+t.bountyProgress('kill', 1, 2); // zone=2 != 1
+assert(t.state.bounties[0].progress===0, 'kill zone 不匹配不推进');
+// 领取
+t.state.bounties[0].done=true; t.state.bounties[0].zone=1;
+const li0 = t.state.lingshi, c0 = t.state.sect.contribution;
+t.claimBounty(t.state.bounties[0].id);
+assert(t.state.bounties[0].claimed===true, '领取后 claimed=true');
+assert(t.state.lingshi > li0 && t.state.sect.contribution > c0, '领取增加灵石与贡献');
+// 手动刷新
+t.state.lingshi = 0;
+t.refreshBounties(true); // 灵石不足，应不变
+t.state.lingshi = 100000;
+const before = t.state.bountyRound;
+t.refreshBounties(true);
+assert(t.state.bountyRound === before+1, '手动刷新批次+1');
+assert(t.state.lingshi === 50000, '手动刷新扣 50000');
+assert(t.state.bounties.length===4, '刷新后 4 条新悬赏');
+t.state.sect = null; t.state.sub = 0; t.state.lingshi = 0; t.state.bounties=[];
+
 console.log('SMOKE OK: '+(typeof process!=='undefined'?process.argv[1]:'smoke'));

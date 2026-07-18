@@ -102,9 +102,52 @@ const SECTS = [
 const SECT_UNLOCK_SUB  = 4;          // 筑基期可加入
 const SECT_SWITCH_BASE = 500000;     // 转宗基础灵石
 function sectBonus(){ return state.sect ? (SECTS.find(s=>s.id===state.sect.id)||{}).bonus || {} : {}; }
-// 占位（Task 3 替换为真实实现，避免 joinSect 调用时 ReferenceError）
-const BOUNTY_REFRESH_MS = 30*60*1000;
-function generateBounties(){ return []; }
+/* ---------- 悬赏 ---------- */
+const BOUNTY_COUNT        = 4;
+const BOUNTY_REFRESH_MS   = 30 * 60 * 1000;   // 30 分钟定时刷新
+const BOUNTY_MANUAL_COST  = 50000;            // 手动刷新灵石
+const BOUNTY_TEMPLATES = [
+  { type:'kill',  label:'击杀', desc:(n,z)=>`于${ZONE_NAMES[z]}击杀 ${n} 只妖兽` },
+  { type:'med',   label:'打坐', desc:(n)=>`打坐吐纳 ${n} 次` },
+  { type:'craft', label:'炼丹', desc:(n)=>`成功炼丹 ${n} 次` },
+  { type:'break', label:'突破', desc:(n)=>`完成 ${n} 次突破` },
+  { type:'hoard', label:'积攒', desc:(n)=>`持有 ${fmt(n)} 灵石` },
+];
+function bountyTargetN(tpl){
+  const r = realmOf(state.sub);
+  switch(tpl.type){
+    case 'kill':  return 3 + r * 2;
+    case 'med':   return 5 + r * 3;
+    case 'craft': return 2 + r;
+    case 'break': return 1 + Math.floor(r / 2);
+    case 'hoard': return Math.round(200 * Math.pow(3, r));
+    default: return 5;
+  }
+}
+function bountyReward(tpl, n){
+  const r = realmOf(state.sub);
+  const baseLi = Math.round(20 * Math.pow(2.5, r));
+  const contrib = 10 + r * 5 + (tpl.type === 'hoard' ? 5 : 0);
+  return { lingshi: baseLi, contribution: contrib, herb: tpl.type==='kill'?1:0, core: tpl.type==='kill'?1:0 };
+}
+function generateBounties(){
+  const arr = [];
+  const maxZ = Math.max(0, Math.floor(state.sub / 4));
+  for (let i = 0; i < BOUNTY_COUNT; i++){
+    const tpl = BOUNTY_TEMPLATES[Math.floor(Math.random() * BOUNTY_TEMPLATES.length)];
+    const n = bountyTargetN(tpl);
+    const zone = tpl.type === 'kill' ? Math.max(0, maxZ - Math.floor(Math.random() * 3)) : 0;
+    arr.push({
+      id: 'b' + (state.bountyRound||0) + '_' + i,
+      type: tpl.type, label: tpl.label,
+      desc: tpl.desc(n, zone),
+      target: n, zone, progress: 0,
+      reward: bountyReward(tpl, n),
+      done: false, claimed: false,
+    });
+  }
+  return arr;
+}
 
 /* ---------- 秘境 / 妖兽 ---------- */
 const ZONE_NAMES = ['后山密林','落云谷','幽冥沼泽','万妖林','焚天火山','冰魄雪原','九幽深渊','天魔域','混沌海'];
@@ -294,6 +337,14 @@ function tick(){
   lastTick = now;
   if (state.won || document.hidden) return;
   if (state.debuff && Date.now() >= state.debuff.until) state.debuff = null; // 走火入魔到期
+  if (state.sect && state.bounties.length && state.bountyRefreshAt && Date.now() >= state.bountyRefreshAt){
+    if (!state.bounties.every(b => b.claimed)){
+      state.bountyRound = (state.bountyRound||0) + 1;
+      state.bounties = generateBounties();
+      log(`📜 悬赏榜定时更新（第 ${state.bountyRound} 批）。`);
+    }
+    state.bountyRefreshAt = Date.now() + BOUNTY_REFRESH_MS;
+  }
   state.xiuwei  += cultRate() * dt;
   state.lingshi += lingshiPerSec() * dt;
   if (!battleState && state.hp < playerMaxHp()){
@@ -331,6 +382,7 @@ function meditate(){
   const gain = cultRate() * MEDITATE_MULT;
   state.xiuwei += gain;
   state.stats.meditations++;
+  bountyProgress('med', 1);
   floatText('+' + fmt(gain));
   log(`🧘 打坐吐纳，修为 +${fmt(gain)}`);
   refreshStats(); save();
@@ -361,6 +413,7 @@ function doBreakthrough(){
     state.sub += 1;
     state.hp = playerMaxHp();
     state.stats.breakthroughs++;
+    bountyProgress('break', 1);
     if (state.sub >= TOTAL_SUB){
       state.won = true;
       log('🌅 突破渡劫圆满，霞光万丈，你飞升成仙！');
@@ -429,6 +482,7 @@ function endBattle(win){
     const liGain = Math.round(li * (1 + (treasureBonus().lingshi || 0)));
     state.lingshi += liGain;
     state.stats.kills++;
+    bountyProgress('kill', 1, b.zone);
     const drops = [];
     if (Math.random() < b.mon.herbChance){ state.inv.herb++; drops.push('灵草×1'); }
     if (Math.random() < b.mon.coreChance){ state.inv.core++; drops.push('妖核×1'); }
@@ -513,6 +567,7 @@ function craft(id){
   for (const k in r.mats) state.inv[k] -= r.mats[k];
   if (Math.random() < alchemyChance()){
     state.inv[r.out]++;
+    bountyProgress('craft', 1);
     log(`⚗️ 炼丹成功，得 ${PILL_DEFS[r.out].name}！`);
   } else {
     log(`⚗️ 炼丹失败，材料化为灰烬，损耗灵石 ${fmt(r.cost)}。`);
@@ -555,6 +610,51 @@ function switchSect(id){
   state.sect.switches = times + 1;
   const s = SECTS.find(x=>x.id===id);
   log(`🏯 转投 ${s.name}，花费灵石 ${fmt(cost)}。${s.desc}`);
+  refreshStats(); renderTab(); save();
+}
+function bountyProgress(type, amount, zone){
+  if (!state.sect || !state.bounties.length) return;
+  let changed = false;
+  for (const b of state.bounties){
+    if (b.done || b.claimed || b.type !== type) continue;
+    if (type === 'kill' && b.zone !== zone) continue;
+    b.progress = Math.min(b.target, b.progress + amount);
+    if (b.progress >= b.target){ b.done = true; }
+    changed = true;
+  }
+  if (changed){ /* UI 在下次 renderTab 刷新 */ }
+}
+function checkBountyAutoRefresh(){
+  if (state.bounties.length && state.bounties.every(b => b.claimed)){
+    state.bountyRound = (state.bountyRound||0) + 1;
+    state.bounties = generateBounties();
+    state.bountyRefreshAt = Date.now() + BOUNTY_REFRESH_MS;
+    log(`📜 悬赏全部完成，悬赏榜自动更新（第 ${state.bountyRound} 批）。`);
+  }
+}
+function refreshBounties(manual){
+  if (manual){
+    if (state.lingshi < BOUNTY_MANUAL_COST){ log(`📜 刷新悬赏需灵石 ${fmt(BOUNTY_MANUAL_COST)}。`); return; }
+    state.lingshi -= BOUNTY_MANUAL_COST;
+  }
+  state.bountyRound = (state.bountyRound||0) + 1;
+  state.bounties = generateBounties();
+  state.bountyRefreshAt = Date.now() + BOUNTY_REFRESH_MS;
+  log(`📜 悬赏榜已更新（第 ${state.bountyRound} 批）。`);
+  refreshStats(); renderTab(); save();
+}
+function claimBounty(id){
+  const b = state.bounties.find(x=>x.id===id);
+  if (!b || !b.done || b.claimed) return;
+  if (b.type === 'hoard' && state.lingshi < b.target){ log(`📜 需持有 ${fmt(b.target)} 灵石方可领取。`); return; }
+  b.claimed = true;
+  state.lingshi += b.reward.lingshi;
+  state.sect.contribution += b.reward.contribution;
+  if (b.reward.herb) state.inv.herb += b.reward.herb;
+  if (b.reward.core) state.inv.core += b.reward.core;
+  state.stats.bounties = (state.stats.bounties||0) + 1;
+  log(`📜 领取悬赏：灵石 +${fmt(b.reward.lingshi)}，贡献 +${b.reward.contribution}`);
+  checkBountyAutoRefresh();
   refreshStats(); renderTab(); save();
 }
 
@@ -689,6 +789,8 @@ function refreshSectBtns(){
     const cost = Math.round(SECT_SWITCH_BASE * Math.pow(2, times));
     b.disabled = !state.sect || state.lingshi < cost;
   });
+  const rb = document.querySelector('#tabContent [data-action="refresh-bounty"]');
+  if (rb) rb.disabled = state.lingshi < BOUNTY_MANUAL_COST;
 }
 
 /* ---------- 渲染：各面板 ---------- */
@@ -895,9 +997,25 @@ function renderSect(){
   h += renderSectShop();      // Task 4 实现；Task 2 中占位返回 ''
   return h;
 }
-// 占位（Task 3/4 替换为真实实现）
-function renderBountyBoard(){ return ''; }
+// 占位（Task 4 替换为真实实现）
 function renderSectShop(){ return ''; }
+function renderBountyBoard(){
+  if (!state.sect) return '';
+  const remain = Math.max(0, Math.ceil((state.bountyRefreshAt - Date.now()) / 1000));
+  let h = '<div class="inv-sec"><h3>📜 悬赏榜</h3>';
+  h += `<div class="alch-mats" style="margin-bottom:8px">第 ${state.bountyRound||0} 批 · 定时刷新 ${fmtDur(remain)}
+    <button class="tab-btn" data-action="refresh-bounty" style="margin-left:8px">💎 ${fmt(BOUNTY_MANUAL_COST)} 立即刷新</button></div>`;
+  h += '<div class="item-list">';
+  for (const b of state.bounties){
+    const status = b.claimed ? '✓已领取' : (b.done ? '★可领取' : `${b.progress}/${b.target}`);
+    const rewardStr = `💎${fmt(b.reward.lingshi)} +🏯${b.reward.contribution}${b.reward.herb?' +🌿1':''}${b.reward.core?' +💀1':''}`;
+    h += `<div class="item"><div class="item-info"><b>${b.label}：${b.desc}</b>
+      <span>奖励 ${rewardStr}　|　${status}</span></div>
+      <button class="tab-btn" data-action="claim-bounty" data-id="${b.id}" ${(!b.done||b.claimed)?'disabled':''}>${b.claimed?'已领':'领取'}</button></div>`;
+  }
+  h += '</div></div>';
+  return h;
+}
 
 /* ---------- 胜利 ---------- */
 function showVictory(){
@@ -1052,6 +1170,8 @@ function init(){
     else if (a === 'equip-treasure') equipTreasure(btn.dataset.id);
     else if (a === 'join-sect')   { joinSect(btn.dataset.id); renderTab(); refreshStats(); return; }
     else if (a === 'switch-sect') { switchSect(btn.dataset.id); renderTab(); refreshStats(); return; }
+    else if (a === 'refresh-bounty'){ refreshBounties(true); return; }
+    else if (a === 'claim-bounty')  { claimBounty(btn.dataset.id); return; }
     else if (a === 'shop-subtab'){ state.shopSubtab = btn.dataset.sub; renderTab(); refreshStats(); return; }
     else if (a === 'save')       { save(); log('💾 已保存'); refreshStats(); return; }
     else if (a === 'reset')      { resetGame(); return; }
