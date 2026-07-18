@@ -9,19 +9,27 @@
 <body>
   <div id="game">
 
-    <!-- 顶部状态栏 -->
+    <!-- 顶部状态栏 · 角色头部 -->
     <header id="topbar">
       <div class="char">
-        <div class="realm" id="realmLabel">练气期初期</div>
-        <div class="progress">
-          <div class="bar" id="xiuweiBar"></div>
-          <span class="progress-text" id="xiuweiText">0 / 100</span>
+        <div class="avatar" id="avatar" aria-hidden="true">练</div>
+        <div class="char-main">
+          <div class="realm" id="realmLabel">练气期初期</div>
+          <div class="progress">
+            <div class="bar" id="xiuweiBar"></div>
+            <span class="progress-text" id="xiuweiText">0 / 100</span>
+          </div>
         </div>
       </div>
       <div class="stats">
-        <span class="stat">🪙 <b id="lingshiText">0</b></span>
-        <span class="stat hp">❤️ <b id="hpText">100/100</b></span>
-        <div class="hpbar"><div class="bar" id="hpBar"></div></div>
+        <div class="lingshi-chip"><span class="gem-icon" aria-hidden="true"></span><b id="lingshiText">0</b></div>
+        <div class="hp-chip">
+          <span class="hp-icon">❤️</span>
+          <b id="hpText">100/100</b>
+          <div class="hpbar"><div class="bar" id="hpBar"></div></div>
+        </div>
+        <span id="debugBadge" class="debug-badge hidden">测试模式</span>
+        <button class="debug-toggle" id="debugToggle" title="测试面板 (Ctrl+Shift+D)">⚙️</button>
       </div>
     </header>
 
@@ -36,10 +44,11 @@
         <button id="meditateBtn" class="big-btn meditate">🧘 打坐吐纳 <small>(空格)</small></button>
         <button id="breakBtn" class="big-btn break">✨ 突破境界</button>
         <div class="attrs">
-          <span>⚔️ 攻 <b id="atkText">10</b></span>
-          <span>🛡️ 防 <b id="defText">5</b></span>
+          <span>⚔️ 攻 <b id="atkText">8</b></span>
+          <span>🛡️ 防 <b id="defText">4</b></span>
         </div>
         <div class="tech-line">📕 功法：<b id="techText">无</b></div>
+        <div id="debuffLine" class="debuff-line hidden"></div>
       </section>
 
       <!-- 右：功能标签 -->
@@ -48,7 +57,7 @@
           <button class="tab active" data-tab="zone">⚔️ 秘境</button>
           <button class="tab" data-tab="shop">🏪 集市</button>
           <button class="tab" data-tab="alchemy">⚗️ 炼丹</button>
-          <button class="tab" data-tab="inventory">🎒 洞府</button>
+          <button class="tab" data-tab="inventory">🎒 行囊</button>
         </nav>
         <div id="tabContent"></div>
       </section>
@@ -67,6 +76,53 @@
       <h1>🌅 飞升成仙</h1>
       <p id="victoryText"></p>
       <button id="restartBtn">🔄 轮回重修</button>
+    </div>
+  </div>
+
+  <!-- 调试/测试面板（仅供调试，会话级，不影响存档） -->
+  <div id="debugPanel" class="hidden">
+    <div class="dbg-head">
+      <span>🛠 测试面板（仅供调试）</span>
+      <button class="dbg-close" id="dbgClose" title="关闭">✕</button>
+    </div>
+    <div class="dbg-body">
+      <div class="dbg-section">
+        <div class="dbg-label">修为</div>
+        <div class="dbg-row">
+          <button class="dbg-btn" data-action="dbg-xiuwei-fill">填满至需求</button>
+          <button class="dbg-btn" data-action="dbg-xiuwei-10x">+10倍需求</button>
+        </div>
+      </div>
+      <div class="dbg-section">
+        <div class="dbg-label">灵石</div>
+        <div class="dbg-row">
+          <button class="dbg-btn" data-action="dbg-lingshi-1m">+100万</button>
+          <button class="dbg-btn" data-action="dbg-lingshi-10x">×10</button>
+        </div>
+      </div>
+      <div class="dbg-section">
+        <div class="dbg-label">境界 (0-35)</div>
+        <div class="dbg-row">
+          <button class="dbg-btn" data-action="dbg-sub-minus">-1</button>
+          <button class="dbg-btn" data-action="dbg-sub-plus">+1</button>
+          <input type="number" id="dbgSubInput" class="dbg-input" min="0" max="35" value="0">
+          <button class="dbg-btn" data-action="dbg-sub-set">设置</button>
+        </div>
+      </div>
+      <div class="dbg-section">
+        <div class="dbg-row">
+          <button class="dbg-btn" data-action="dbg-maxhp">满血</button>
+          <button class="dbg-btn" data-action="dbg-give-items">材料丹药+10</button>
+        </div>
+        <div class="dbg-row">
+          <button class="dbg-btn" data-action="dbg-unlock-zones">解锁秘境</button>
+          <button class="dbg-btn" data-action="dbg-insta-break">一键突破</button>
+        </div>
+        <div class="dbg-row">
+          <button class="dbg-btn" data-action="dbg-godmode" id="dbgGodBtn">无敌：关</button>
+          <button class="dbg-btn danger" data-action="dbg-reset">散功重修</button>
+        </div>
+      </div>
     </div>
   </div>
 
