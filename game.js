@@ -39,7 +39,10 @@ const GROW = 2.3;                       // 每大境战力指数增长
 const baseAtk   = s => Math.round(8  * Math.pow(GROW, s / 4));
 const baseDef   = s => Math.round(4  * Math.pow(GROW, s / 4));
 const baseMaxHp = s => Math.round(100 * Math.pow(GROW, s / 4));
-const lingshiPerSec = s => LINGSHI_AUTO_BASE * Math.pow(LINGSHI_AUTO_GROWTH, realmOf(s));
+const lingshiPerSec = () => {
+  const base = LINGSHI_AUTO_BASE * Math.pow(LINGSHI_AUTO_GROWTH, realmOf(state.sub));
+  return base * (1 + (treasureBonus().lingshi || 0));
+};
 function breakthroughChance(s){ return 0.9; }  // 小境界突破：高成功率
 function majorBreakChance(s){ return Math.max(0.3, Math.min(0.65, 0.65 - realmOf(s) * 0.03)); } // 大境界突破：较低成功率
 function alchemyChance(){ return Math.min(0.95, 0.6 + realmOf(state.sub) * 0.04); }
@@ -76,6 +79,18 @@ const RECIPES = [
   { id:'r_xiuwei', out:'xiuwei', mats:{core:2, herb:1}, cost:150, desc:'2 妖核+1 灵草 -> 修为丹' },
   { id:'r_tupo',   out:'tupo',   mats:{core:3, herb:2}, cost:400, desc:'3 妖核+2 灵草 -> 突破丹' },
 ];
+
+/* ---------- 法宝（装备槽：treasure） ---------- */
+const TREASURES = [
+  { id:'tr_lotus', name:'灵泉玉瓶', icon:'🍶', desc:'修炼速度 +30%',          bonus:{cult:0.30},                        source:'sect' },
+  { id:'tr_fire',  name:'玄火鉴',   icon:'🔥', desc:'攻击 +20%',              bonus:{atk:0.20},                         source:'drop' },
+  { id:'tr_vajra', name:'金刚镯',   icon:'💍', desc:'防御 +25% / 气血 +15%',  bonus:{def:0.25, maxhp:0.15},             source:'drop' },
+  { id:'tr_blood', name:'嗜血珠',   icon:'🩸', desc:'战斗吸血 30%',           bonus:{lifesteal:0.30},                   source:'sect' },
+  { id:'tr_basin', name:'聚宝盆',   icon:'🏺', desc:'灵石获取 +50%',          bonus:{lingshi:0.50},                     source:'drop' },
+  { id:'tr_jade',  name:'造化玉碟', icon:'💿', desc:'修炼 +60% / 攻防各 +10%', bonus:{cult:0.60, atk:0.10, def:0.10},    source:'sect' },
+];
+const TREASURE_DROP_CHANCE = 0.08;       // 强怪(vIdx=2)掉落概率
+const TREASURE_DROP_ORDER  = ['tr_fire','tr_vajra','tr_basin']; // 按秘境层级递进
 
 /* ---------- 秘境 / 妖兽 ---------- */
 const ZONE_NAMES = ['后山密林','落云谷','幽冥沼泽','万妖林','焚天火山','冰魄雪原','九幽深渊','天魔域','混沌海'];
@@ -123,8 +138,9 @@ function newState(){
     lingshi: 0,
     hp: baseMaxHp(0),
     techniques: [],
-    equip: { weapon:null, armor:null },
+    equip: { weapon:null, armor:null, treasure:null },
     inv: { herb:0, core:0, huiqi:1, xiuwei:0, tupo:0 },
+    treasures: [],
     tupoBuff: false,
     debuff: null, // 走火入魔：{ until: ms, cultMult: 0.5 }
     lastMeditate: 0,
@@ -142,12 +158,20 @@ let debugEnabled  = false;  // 调试面板可见性
 let debugGodMode  = false;  // 战斗无敌
 
 /* ---------- 派生属性 ---------- */
+function equippedTreasure(){
+  return TREASURES.find(t => t.id === state.equip.treasure) || null;
+}
+function treasureBonus(){
+  const t = equippedTreasure();
+  return t ? t.bonus : {};
+}
 function ownedTechniques(){
   return state.techniques.map(id => TECHNIQUES.find(x => x.id === id)).filter(Boolean);
 }
 function effectiveCultMult(){
   let m = 1;
   for (const t of ownedTechniques()) m += t.cultBonus;
+  m += (treasureBonus().cult || 0);
   return m;
 }
 const cultRate    = () => {
@@ -158,9 +182,9 @@ const cultRate    = () => {
   }
   return base;
 };
-const playerAtk   = () => baseAtk(state.sub) + ((WEAPONS.find(x=>x.id===state.equip.weapon)||{}).atk || 0);
-const playerDef   = () => baseDef(state.sub) + ((ARMORS.find(x=>x.id===state.equip.armor)||{}).def || 0);
-const playerMaxHp = () => baseMaxHp(state.sub);
+const playerAtk   = () => Math.round((baseAtk(state.sub) + ((WEAPONS.find(x=>x.id===state.equip.weapon)||{}).atk || 0)) * (1 + (treasureBonus().atk || 0)));
+const playerDef   = () => Math.round((baseDef(state.sub) + ((ARMORS.find(x=>x.id===state.equip.armor)||{}).def || 0)) * (1 + (treasureBonus().def || 0)));
+const playerMaxHp = () => Math.round(baseMaxHp(state.sub) * (1 + (treasureBonus().maxhp || 0)));
 
 /* ---------- 数字格式 ---------- */
 function fmt(n){
@@ -198,7 +222,8 @@ function load(){
     }
     state = Object.assign(newState(), s);
     state.inv   = Object.assign({herb:0,core:0,huiqi:0,xiuwei:0,tupo:0}, s.inv || {});
-    state.equip = Object.assign({weapon:null,armor:null}, s.equip || {});
+    state.equip = Object.assign({weapon:null,armor:null,treasure:null}, s.equip || {});
+    state.treasures = Array.isArray(s.treasures) ? s.treasures.slice() : [];
     state.stats = Object.assign({kills:0,deaths:0,breakthroughs:0,meditations:0}, s.stats || {});
     state.debuff = (s.debuff && typeof s.debuff.until === 'number') ? s.debuff : null;
     state.shopSubtab = s.shopSubtab || 'tech';
@@ -247,7 +272,7 @@ function tick(){
   if (state.won || document.hidden) return;
   if (state.debuff && Date.now() >= state.debuff.until) state.debuff = null; // 走火入魔到期
   state.xiuwei  += cultRate() * dt;
-  state.lingshi += lingshiPerSec(state.sub) * dt;
+  state.lingshi += lingshiPerSec() * dt;
   if (!battleState && state.hp < playerMaxHp()){
     state.hp = Math.min(playerMaxHp(), state.hp + regenPerSec(state.sub) * dt);
   }
@@ -361,6 +386,10 @@ function battleRound(){
   const b = battleState; if (!b) return;
   const pd = dmgCalc(playerAtk(), b.mon.def);
   b.monHp -= pd;
+  const ls = treasureBonus().lifesteal || 0;
+  if (ls > 0 && state.hp < playerMaxHp()){
+    state.hp = Math.min(playerMaxHp(), state.hp + Math.max(1, Math.round(pd * ls)));
+  }
   if (b.monHp <= 0){ b.monHp = 0; return endBattle(true); }
   if (debugGodMode){ refreshBattle(); return; } // 无敌：玩家不受伤，妖兽仍受伤
   const md = dmgCalc(b.mon.atk, playerDef());
@@ -373,12 +402,21 @@ function endBattle(win){
   clearInterval(b.timer);
   if (win){
     const li = Math.round(b.mon.lingshi[0] + Math.random() * (b.mon.lingshi[1] - b.mon.lingshi[0]));
-    state.lingshi += li;
+    const liGain = Math.round(li * (1 + (treasureBonus().lingshi || 0)));
+    state.lingshi += liGain;
     state.stats.kills++;
     const drops = [];
     if (Math.random() < b.mon.herbChance){ state.inv.herb++; drops.push('灵草×1'); }
     if (Math.random() < b.mon.coreChance){ state.inv.core++; drops.push('妖核×1'); }
-    log(`🏆 击杀 ${b.mon.name}，得灵石 ${fmt(li)}${drops.length ? '，掉落 ' + drops.join('、') : ''}`);
+    if (b.var === 2 && Math.random() < TREASURE_DROP_CHANCE){
+      const dropId = TREASURE_DROP_ORDER[Math.min(TREASURE_DROP_ORDER.length-1, Math.floor(b.zone/3))];
+      if (!state.treasures.includes(dropId)){
+        state.treasures.push(dropId);
+        const tr = TREASURES.find(x=>x.id===dropId);
+        drops.push(`法宝 ${tr.icon}${tr.name}`);
+      }
+    }
+    log(`🏆 击杀 ${b.mon.name}，得灵石 ${fmt(liGain)}${drops.length ? '，掉落 ' + drops.join('、') : ''}`);
   } else {
     const lossLi = Math.floor(state.lingshi * 0.2);
     const lossXw = Math.floor(state.xiuwei * 0.1);
@@ -465,6 +503,13 @@ function usePill(id){
   else if (id === 'tupo'){ state.tupoBuff = true; log('⚡ 服下突破丹，下次突破成功率提升。'); }
   save();
 }
+function equipTreasure(id){
+  if (!state.treasures.includes(id)) return;
+  const t = TREASURES.find(x=>x.id===id);
+  if (state.equip.treasure === id){ state.equip.treasure = null; log(`📿 卸下法宝 ${t.name}`); }
+  else { state.equip.treasure = id; log(`📿 装备法宝 ${t.name}`); }
+  refreshStats(); renderTab(); save();
+}
 
 /* ---------- 浮动数字 ---------- */
 function floatText(txt){
@@ -499,6 +544,7 @@ function refreshStats(){
   document.getElementById('defText').textContent = fmt(playerDef());
   document.getElementById('techText').textContent =
     ownedTechniques().map(t => t.name).join('、') || '无';
+  document.getElementById('treasureText').textContent = equippedTreasure() ? equippedTreasure().name : '无';
 
   const now = Date.now();
   const med = document.getElementById('meditateBtn');
@@ -731,6 +777,22 @@ function renderInventory(){
   h += `<p>境界：${state.won?'飞升':realmName(state.sub)}　|　击杀 ${state.stats.kills}　战败 ${state.stats.deaths}　突破 ${state.stats.breakthroughs}　打坐 ${state.stats.meditations}</p></div>`;
   h += '<div class="inv-sec"><h3>📕 已习功法</h3><p>' + (ownedTechniques().map(t => t.name).join('、') || '尚无') + '</p></div>';
   h += `<div class="inv-sec"><h3>⚔️ 装备</h3><p>武器：${w?w.name+' (攻+'+w.atk+')':'空手'}　护甲：${a?a.name+' (防+'+a.def+')':'无'}</p></div>`;
+  h += '<div class="inv-sec"><h3>📿 法宝</h3>';
+  const eqT = equippedTreasure();
+  h += `<p>已装备：${eqT ? eqT.icon+eqT.name+' ('+eqT.desc+')' : '无'}</p>`;
+  if (state.treasures.length){
+    h += '<div class="item-list">';
+    for (const id of state.treasures){
+      const t = TREASURES.find(x=>x.id===id);
+      const eq = state.equip.treasure === id;
+      h += `<div class="item"><div class="item-info"><b>${t.icon} ${t.name}</b><span>${t.desc}</span></div>
+        <button class="tab-btn" data-action="equip-treasure" data-id="${id}">${eq?'卸下':'装备'}</button></div>`;
+    }
+    h += '</div>';
+  } else {
+    h += '<p style="font-size:12px;color:var(--muted-dim)">尚无法宝（击杀"强"档妖兽或宗门兑换可得）</p>';
+  }
+  h += '</div>';
   h += `<div class="inv-sec"><h3>🎒 储物袋</h3><p>🌿灵草×${state.inv.herb}　💀妖核×${state.inv.core}</p><div class="item-list">`;
   for (const id of ['huiqi','xiuwei','tupo']){
     const p = PILL_DEFS[id];
@@ -894,6 +956,7 @@ function init(){
     else if (a === 'buy-pill')   buyPill(btn.dataset.id);
     else if (a === 'craft')      craft(btn.dataset.id);
     else if (a === 'use-pill')   usePill(btn.dataset.id);
+    else if (a === 'equip-treasure') equipTreasure(btn.dataset.id);
     else if (a === 'shop-subtab'){ state.shopSubtab = btn.dataset.sub; renderTab(); refreshStats(); return; }
     else if (a === 'save')       { save(); log('💾 已保存'); refreshStats(); return; }
     else if (a === 'reset')      { resetGame(); return; }
