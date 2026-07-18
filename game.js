@@ -5,8 +5,8 @@
    ========================================================= */
 
 /* ---------- 配置常量（可调平衡） ---------- */
-const SAVE_KEY        = 'xiuxian_save_v1';
-const SAVE_VERSION    = 1;
+const SAVE_KEY        = 'xiuxian_save_v2';
+const SAVE_VERSION    = 2;
 const TICK_MS         = 200;      // 主循环间隔
 const AUTOSAVE_MS     = 10000;    // 自动存档间隔
 const OFFLINE_CAP_SEC = 8 * 3600; // 离线收益最多算 8 小时
@@ -102,6 +102,46 @@ const SECTS = [
 const SECT_UNLOCK_SUB  = 4;          // 筑基期可加入
 const SECT_SWITCH_BASE = 500000;     // 转宗基础灵石
 function sectBonus(){ return state.sect ? (SECTS.find(s=>s.id===state.sect.id)||{}).bonus || {} : {}; }
+
+/* ---------- 宗门专属功法（贡献兑换，每宗一本） ---------- */
+const SECT_TECHS = [
+  { id:'st_sword', sect:'sect_sword', name:'万剑诀',   icon:'⚔️', desc:'攻击力 +25',              cost:300, bonus:{atkFlat:25} },
+  { id:'st_pill',  sect:'sect_pill',  name:'神农经',   icon:'🌿', desc:'修为丹效果 ×1.4',          cost:300, bonus:{pillXiuweiMul:0.40} },
+  { id:'st_talisman', sect:'sect_talisman', name:'天机策', icon:'📜', desc:'修炼速度 +20%',        cost:300, bonus:{cult:0.20} },
+  { id:'st_body',  sect:'sect_body',  name:'玄武真解', icon:'🏔', desc:'气血上限 +18%',           cost:300, bonus:{maxhp:0.18} },
+];
+function sectTechBonus(){
+  if (!state.sect || !state.sect.techs || !state.sect.techs.length) return {};
+  const out = {};
+  for (const tid of state.sect.techs){
+    const st = SECT_TECHS.find(x => x.id === tid);
+    if (st) Object.assign(out, st.bonus);
+  }
+  return out;
+}
+
+/* ---------- 宗门贡献商店 ---------- */
+// 分组定义，每项 { type, id, label(name), icon, desc, cost:{contribution:N} }
+function sectShopItems(){
+  const items = [];
+  // 法宝（仅 sect 来源的三件）
+  for (const t of TREASURES.filter(x => x.source === 'sect')){
+    items.push({ type:'treasure', id:t.id, name:t.name, icon:t.icon, desc:t.desc, cost:t.cost });
+  }
+  // 宗门专属功法（仅显示当前宗门那一本）
+  if (state.sect){
+    const st = SECT_TECHS.find(x => x.sect === state.sect.id);
+    if (st && !(state.sect.techs||[]).includes(st.id)){
+      items.push({ type:'sectTech', id:st.id, name:st.name, icon:st.icon, desc:st.desc, cost:{contribution:st.cost} });
+    }
+  }
+  // 丹药
+  items.push({ type:'pill', id:'huiqi',  name:'回血丹', icon:'🩸', desc:'回满气血', cost:{contribution:30} });
+  items.push({ type:'pill', id:'xiuwei', name:'修为丹', icon:'✨', desc:'立即获得修为', cost:{contribution:80} });
+  items.push({ type:'pill', id:'tupo',   name:'突破丹', icon:'⚡', desc:'突破成功率 +30%', cost:{contribution:200} });
+  return items;
+}
+
 /* ---------- 悬赏 ---------- */
 const BOUNTY_COUNT        = 4;
 const BOUNTY_REFRESH_MS   = 30 * 60 * 1000;   // 30 分钟定时刷新
@@ -234,6 +274,7 @@ function effectiveCultMult(){
   for (const t of ownedTechniques()) m += t.cultBonus;
   m += (treasureBonus().cult || 0);
   m += (sectBonus().cult || 0);
+  m += (sectTechBonus().cult || 0);
   return m;
 }
 const cultRate    = () => {
@@ -244,9 +285,9 @@ const cultRate    = () => {
   }
   return base;
 };
-const playerAtk   = () => Math.round((baseAtk(state.sub) + ((WEAPONS.find(x=>x.id===state.equip.weapon)||{}).atk || 0)) * (1 + (treasureBonus().atk || 0)));
+const playerAtk   = () => Math.round((baseAtk(state.sub) + ((WEAPONS.find(x=>x.id===state.equip.weapon)||{}).atk || 0) + (sectTechBonus().atkFlat || 0)) * (1 + (treasureBonus().atk || 0)));
 const playerDef   = () => Math.round((baseDef(state.sub) + ((ARMORS.find(x=>x.id===state.equip.armor)||{}).def || 0)) * (1 + (treasureBonus().def || 0) + (sectBonus().def || 0)));
-const playerMaxHp = () => Math.round(baseMaxHp(state.sub) * (1 + (treasureBonus().maxhp || 0) + (sectBonus().maxhp || 0)));
+const playerMaxHp = () => Math.round(baseMaxHp(state.sub) * (1 + (treasureBonus().maxhp || 0) + (sectBonus().maxhp || 0) + (sectTechBonus().maxhp || 0)));
 
 /* ---------- 数字格式 ---------- */
 function fmt(n){
@@ -271,7 +312,33 @@ function save(){
 }
 function load(){
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    let raw = localStorage.getItem(SAVE_KEY);
+    // v1 → v2 迁移：尝试读取旧存档
+    if (!raw){
+      const v1raw = localStorage.getItem('xiuxian_save_v1');
+      if (v1raw){
+        const v1 = JSON.parse(v1raw);
+        if (v1 && v1.version === 1){
+          // 迁移：补充 v2 新字段
+          v1.version = SAVE_VERSION;
+          v1.equip = v1.equip || {};
+          v1.equip.treasure = v1.equip.treasure || null;
+          v1.treasures = Array.isArray(v1.treasures) ? v1.treasures : [];
+          v1.sect = null;
+          v1.sectTechs = [];
+          v1.bounties = [];
+          v1.bountyRefreshAt = 0;
+          v1.bountyRound = 0;
+          v1.stats = v1.stats || {};
+          v1.stats.bounties = 0;
+          raw = JSON.stringify(v1);
+          localStorage.setItem(SAVE_KEY, raw);
+          try { localStorage.setItem('xiuxian_save_v1_bak', v1raw); } catch(e){}
+          localStorage.removeItem('xiuxian_save_v1');
+          log('📦 存档已迁移至 v2，旧档已备份。');
+        }
+      }
+    }
     if (!raw) return false;
     const s = JSON.parse(raw);
     if (!s) return false;
@@ -286,7 +353,7 @@ function load(){
     state.inv   = Object.assign({herb:0,core:0,huiqi:0,xiuwei:0,tupo:0}, s.inv || {});
     state.equip = Object.assign({weapon:null,armor:null,treasure:null}, s.equip || {});
     state.treasures = Array.isArray(s.treasures) ? s.treasures.slice() : [];
-    state.sect = (s.sect && s.sect.id) ? { id:s.sect.id, contribution:s.sect.contribution||0, switches:s.sect.switches||0 } : null;
+    state.sect = (s.sect && s.sect.id) ? { id:s.sect.id, contribution:s.sect.contribution||0, switches:s.sect.switches||0, techs:Array.isArray(s.sect.techs)?s.sect.techs.slice():[] } : null;
     state.bounties = Array.isArray(s.bounties) ? s.bounties : [];
     state.bountyRefreshAt = s.bountyRefreshAt || 0;
     state.bountyRound = s.bountyRound || 0;
@@ -578,7 +645,7 @@ function usePill(id){
   if ((state.inv[id] || 0) <= 0) return;
   state.inv[id]--;
   if (id === 'huiqi'){ state.hp = playerMaxHp(); log('🩸 服下回血丹，气血充盈。'); }
-  else if (id === 'xiuwei'){ const g = Math.round(pillXiuwei(state.sub) * (1 + (sectBonus().pillXiuwei || 0))); state.xiuwei += g; log(`✨ 服下修为丹，修为 +${fmt(g)}。`); }
+  else if (id === 'xiuwei'){ const g = Math.round(pillXiuwei(state.sub) * (1 + (sectBonus().pillXiuwei || 0) + (sectTechBonus().pillXiuweiMul || 0))); state.xiuwei += g; log(`✨ 服下修为丹，修为 +${fmt(g)}。`); }
   else if (id === 'tupo'){ state.tupoBuff = true; log('⚡ 服下突破丹，下次突破成功率提升。'); }
   save();
 }
@@ -594,7 +661,7 @@ function joinSect(id){
   if (state.sub < SECT_UNLOCK_SUB){ log(`🏯 需达到 ${realmName(SECT_UNLOCK_SUB)} 方可拜入宗门。`); return; }
   const s = SECTS.find(x=>x.id===id);
   if (!s) return;
-  state.sect = { id, contribution:0, switches:0 };
+  state.sect = { id, contribution:0, switches:0, techs:[] };
   state.bounties = generateBounties();          // Task 3 定义；此时若未定义则先返回占位
   state.bountyRefreshAt = Date.now() + BOUNTY_REFRESH_MS;
   log(`🏯 拜入 ${s.name}，${s.desc}！`);
@@ -607,6 +674,7 @@ function switchSect(id){
   if (state.lingshi < cost){ log(`🏯 转宗需灵石 ${fmt(cost)}，不足！`); return; }
   state.lingshi -= cost;
   state.sect.id = id;
+  state.sect.techs = [];
   state.sect.switches = times + 1;
   const s = SECTS.find(x=>x.id===id);
   log(`🏯 转投 ${s.name}，花费灵石 ${fmt(cost)}。${s.desc}`);
@@ -791,6 +859,13 @@ function refreshSectBtns(){
   });
   const rb = document.querySelector('#tabContent [data-action="refresh-bounty"]');
   if (rb) rb.disabled = state.lingshi < BOUNTY_MANUAL_COST;
+  document.querySelectorAll('#tabContent [data-action="buy-sect-item"]').forEach(b => {
+    const items = sectShopItems();
+    const item = items.find(x => x.type === b.dataset.type && x.id === b.dataset.id);
+    const owned = item && ((item.type === 'treasure' && state.treasures.includes(item.id)) ||
+                           (item.type === 'sectTech' && (state.sect && (state.sect.techs||[]).includes(item.id))));
+    b.disabled = !state.sect || !item || (state.sect.contribution < (item.cost.contribution||0)) || owned;
+  });
 }
 
 /* ---------- 渲染：各面板 ---------- */
@@ -997,8 +1072,50 @@ function renderSect(){
   h += renderSectShop();      // Task 4 实现；Task 2 中占位返回 ''
   return h;
 }
-// 占位（Task 4 替换为真实实现）
-function renderSectShop(){ return ''; }
+// 宗门贡献商店
+function buySectItem(type, id){
+  if (!state.sect) return;
+  const items = sectShopItems();
+  const item = items.find(x => x.type === type && x.id === id);
+  if (!item) return;
+  const cnt = item.cost.contribution || 0;
+  if (state.sect.contribution < cnt){ log(`🏯 贡献不足，需 ${cnt} 贡献。`); return; }
+  state.sect.contribution -= cnt;
+  if (type === 'treasure'){
+    if (state.treasures.includes(id)){ log(`🏯 已有此法宝。`); state.sect.contribution += cnt; return; }
+    state.treasures.push(id);
+    const tr = TREASURES.find(x=>x.id===id);
+    log(`🏯 兑换法宝 ${tr.icon}${tr.name}！`);
+  } else if (type === 'sectTech'){
+    if (!state.sect.techs) state.sect.techs = [];
+    state.sect.techs.push(id);
+    const st = SECT_TECHS.find(x=>x.id===id);
+    log(`🏯 习得宗门秘传 ${st.icon}${st.name}！`);
+  } else if (type === 'pill'){
+    state.inv[id]++;
+    log(`🏯 兑换 ${PILL_DEFS[id].name}。`);
+  }
+  refreshStats(); renderTab(); save();
+}
+function renderSectShop(){
+  if (!state.sect) return '';
+  const items = sectShopItems();
+  if (!items.length) return '';
+  let h = '<div class="inv-sec"><h3>🛒 贡献商店</h3>';
+  h += `<p style="font-size:12px;color:var(--muted);margin-bottom:8px">可用贡献：<b style="color:var(--gold-bright)">${fmt(state.sect.contribution)}</b></p>`;
+  h += '<div class="item-list">';
+  for (const item of items){
+    const cnt = item.cost.contribution || 0;
+    const aff = state.sect.contribution >= cnt;
+    const tag = item.type === 'treasure' ? '[法宝]' : (item.type === 'sectTech' ? '[秘传]' : '[丹药]');
+    const owned = (item.type === 'treasure' && state.treasures.includes(item.id)) ||
+                  (item.type === 'sectTech' && (state.sect.techs||[]).includes(item.id));
+    h += `<div class="item"><div class="item-info"><b>${item.icon} ${item.name} <small style="color:var(--jade-dim)">${tag}</small></b><span>${item.desc}</span></div>
+      <button class="tab-btn" data-action="buy-sect-item" data-type="${item.type}" data-id="${item.id}" ${(!aff||owned)?'disabled':''}>${owned?'已拥有':'🏯 '+cnt}</button></div>`;
+  }
+  h += '</div></div>';
+  return h;
+}
 function renderBountyBoard(){
   if (!state.sect) return '';
   const remain = Math.max(0, Math.ceil((state.bountyRefreshAt - Date.now()) / 1000));
@@ -1172,6 +1289,7 @@ function init(){
     else if (a === 'switch-sect') { switchSect(btn.dataset.id); renderTab(); refreshStats(); return; }
     else if (a === 'refresh-bounty'){ refreshBounties(true); return; }
     else if (a === 'claim-bounty')  { claimBounty(btn.dataset.id); return; }
+    else if (a === 'buy-sect-item') { buySectItem(btn.dataset.type, btn.dataset.id); return; }
     else if (a === 'shop-subtab'){ state.shopSubtab = btn.dataset.sub; renderTab(); refreshStats(); return; }
     else if (a === 'save')       { save(); log('💾 已保存'); refreshStats(); return; }
     else if (a === 'reset')      { resetGame(); return; }
