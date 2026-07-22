@@ -22,6 +22,8 @@
         </div>
       </div>
       <div class="stats">
+        <div class="dao-chip" title="道果 · 跨周目元货币（轮回转世获得，点亮轮回天赋）"><span class="dao-icon" aria-hidden="true">💎</span><b id="daoFruitText">0</b></div>
+        <div class="luck-chip" id="luckChip" title="气运 · 影响突破/炼丹/掉落概率（卜卦消耗）"><span aria-hidden="true">🍀</span><b id="luckText">50</b></div>
         <div class="lingshi-chip"><span class="gem-icon" aria-hidden="true"></span><b id="lingshiText">0</b></div>
         <div class="hp-chip">
           <span class="hp-icon">❤️</span>
@@ -40,6 +42,7 @@
         <div class="cult-info">
           <p>修炼速度：<b id="cultRateText">2/秒</b></p>
           <p>当前修为：<b id="xiuweiText2">0</b></p>
+          <p id="herbProdLine" class="hidden">🌿 灵田产出：<b id="herbProdText">0</b>/分</p>
         </div>
         <button id="meditateBtn" class="big-btn meditate">🧘 打坐吐纳 <small>(空格)</small></button>
         <button id="breakBtn" class="big-btn break">✨ 突破境界</button>
@@ -50,6 +53,7 @@
         <div class="tech-line">📕 功法：<b id="techText">无</b></div>
         <div class="tech-line">📿 法宝：<b id="treasureText">无</b></div>
         <div id="debuffLine" class="debuff-line hidden"></div>
+        <button id="reincarnArmyBtn" class="big-btn reincarn hidden">💀 兵解轮回 <small>(渡劫期主动轮回)</small></button>
       </section>
 
       <!-- 右：功能标签 -->
@@ -60,6 +64,9 @@
           <button class="tab" data-tab="alchemy">⚗️ 炼丹</button>
           <button class="tab" data-tab="inventory">🎒 行囊</button>
           <button class="tab" data-tab="sect">🏯 宗门</button>
+          <button class="tab" data-tab="cave">🏘 仙府</button>
+          <button class="tab" data-tab="pet">🐾 灵宠</button>
+          <button class="tab" data-tab="duel">⚔️ 论道</button>
         </nav>
         <div id="tabContent"></div>
       </section>
@@ -77,7 +84,55 @@
     <div class="modal">
       <h1>🌅 飞升成仙</h1>
       <p id="victoryText"></p>
-      <button id="restartBtn">🔄 轮回重修</button>
+      <div class="modal-btns">
+        <button id="reincarnBtn">🔄 轮回转世</button>
+        <button id="restartBtn" class="secondary">💥 散功重修</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 轮回天赋树遮罩（点击顶栏道果徽章打开） -->
+  <div id="samsakaTree" class="overlay hidden">
+    <div class="modal samsaka-modal">
+      <div class="samsaka-modal-head">
+        <h2>🌟 轮回天赋树</h2>
+        <button class="dbg-close" id="samsakaClose" title="关闭">✕</button>
+      </div>
+      <div id="samsakaTreeBody"></div>
+    </div>
+  </div>
+
+  <!-- 奇遇事件遮罩（模块 E） -->
+  <div id="eventOverlay" class="overlay hidden">
+    <div class="modal event-modal">
+      <div id="eventBody"></div>
+    </div>
+  </div>
+
+  <!-- 卜卦/因果遮罩（模块 G） -->
+  <div id="divineOverlay" class="overlay hidden">
+    <div class="modal event-modal">
+      <div class="divine-head">
+        <h2>🍀 卜卦台 · 因果</h2>
+        <button class="dbg-close" id="divineClose" title="关闭">✕</button>
+      </div>
+      <div id="divineBody"></div>
+    </div>
+  </div>
+
+  <!-- 道途选择遮罩（模块 H，元婴期强制） -->
+  <div id="daoChoose" class="overlay hidden">
+    <div class="modal event-modal">
+      <div class="divine-head"><h2>🌟 道途抉择</h2></div>
+      <p class="alch-note" style="text-align:center;margin-bottom:12px">突破元婴，需择一道途，影响此世加成与结局。</p>
+      <div id="daoChooseBody"></div>
+    </div>
+  </div>
+
+  <!-- 九重天劫遮罩（模块 B） -->
+  <div id="tribulation" class="overlay hidden">
+    <div class="modal event-modal">
+      <div id="tribBody"></div>
     </div>
   </div>
 

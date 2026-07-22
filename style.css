@@ -202,6 +202,19 @@ body{
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 .lingshi-chip b{ color: var(--jade-bright); font-size: 15px; }
+/* 道果徽章（紫色，跨周目元货币） */
+.dao-chip{
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
+  background: linear-gradient(180deg, rgba(58,40,82,0.55), rgba(30,22,46,0.7));
+  border: 1px solid var(--purple-dim);
+  border-radius: var(--r-pill);
+  font-size: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 10px rgba(163,113,247,0.18);
+  cursor: help;
+}
+.dao-chip .dao-icon{ font-size: 13px; filter: drop-shadow(0 0 4px rgba(163,113,247,0.7)); }
+.dao-chip b{ color: var(--purple); font-size: 15px; text-shadow: 0 0 8px rgba(163,113,247,0.5); }
 .hp-chip{ color: var(--muted); }
 .hp-chip .hp-icon{ font-size: 13px; }
 .hp-chip b{ color: var(--crimson-bright); font-size: 14px; }
@@ -669,6 +682,79 @@ main{
   box-shadow: 0 6px 22px rgba(227,179,65,0.5), inset 0 1px 0 rgba(255,255,255,0.3);
 }
 .modal button:active{ transform: scale(0.97); }
+.modal-btns{ display: flex; gap: var(--sp-3); justify-content: center; flex-wrap: wrap; }
+.modal-btns button{ flex: 0 1 auto; }
+.modal button.secondary{
+  background: linear-gradient(135deg, #3a2a2a, #2a1c1c);
+  color: var(--crimson-bright);
+  border-color: var(--crimson-dim);
+  box-shadow: 0 4px 14px rgba(248,81,73,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.modal button.secondary:hover{ box-shadow: 0 6px 22px rgba(248,81,73,0.4); }
+.dao-fruit-line{
+  display: inline-block;
+  margin-top: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  color: var(--purple);
+  background: rgba(163,113,247,0.1);
+  border: 1px solid var(--purple-dim);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+}
+.dao-fruit-line b{ color: var(--purple); font-size: 16px; }
+
+/* 兵解轮回按钮（朱砂暗色） */
+.big-btn.reincarn{
+  background: linear-gradient(135deg, #3a1a2a, #5a1a2a);
+  border-color: var(--crimson-dim);
+  color: var(--crimson-bright);
+  box-shadow: 0 4px 14px rgba(248,81,73,0.18), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.big-btn.reincarn:not(:disabled):hover{ box-shadow: 0 6px 22px rgba(248,81,73,0.4); }
+.big-btn.reincarn.hidden{ display: none; }
+
+/* 轮回天赋树面板 */
+.samsaka-modal{ max-width: 720px; width: 92vw; text-align: left; padding: var(--sp-4); }
+.samsaka-modal-head{
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--sp-3); padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+.samsaka-modal-head h2{
+  color: var(--purple); font-size: 22px; font-family: var(--font-serif);
+  letter-spacing: 1.5px; text-shadow: 0 0 12px rgba(163,113,247,0.4);
+}
+.samsaka-head{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3); margin-bottom: var(--sp-3); flex-wrap: wrap;
+  font-size: 14px; color: var(--muted);
+}
+.samsaka-head b{ color: var(--purple); font-size: 18px; }
+.samsaka-meta{ font-size: 12px; }
+.samsaka-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--sp-3);
+}
+.samsaka-node{
+  background: linear-gradient(180deg, var(--bg3), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: var(--sp-3);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.samsaka-node.learned{ border-color: var(--purple-dim); box-shadow: 0 0 12px rgba(163,113,247,0.12); }
+.samsaka-node.maxed{ border-color: var(--gold-dim); box-shadow: 0 0 14px rgba(227,179,65,0.18); }
+.sn-head{ display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; }
+.sn-head b{ font-size: 14px; color: var(--ink-bright); }
+.sn-icon{ font-size: 18px; }
+.sn-branch{ font-size: 10px; color: var(--muted-dim); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 1px 6px; margin-left: auto; }
+.sn-stars{ color: var(--gold-bright); font-size: 14px; letter-spacing: 1px; }
+.sn-stars small{ color: var(--muted); font-size: 11px; margin-left: 4px; }
+.sn-effect{ font-size: 12px; color: var(--muted); min-height: 32px; }
+.samsaka-node .tab-btn{ margin-top: auto; }
+.samsaka-life{ margin-top: var(--sp-4); padding-top: var(--sp-2); border-top: 1px dashed var(--border); font-size: 12px; color: var(--muted-dim); text-align: center; }
 
 /* ============ 浮动数字 ============ */
 .float-text{
@@ -826,6 +912,182 @@ main{
   transition: border-color var(--t), box-shadow var(--t);
 }
 .dbg-input:focus{ outline: none; border-color: var(--gold); box-shadow: 0 0 6px rgba(227,179,65,0.25); }
+
+/* ============ 洞府建设（模块 C） ============ */
+.cave-head{
+  display: flex; flex-wrap: wrap; gap: var(--sp-3);
+  font-size: 13px; color: var(--muted);
+  padding: var(--sp-2) var(--sp-1) var(--sp-3);
+}
+.cave-head b{ color: var(--jade-bright); }
+.cave-grid{ gap: var(--sp-3); }
+.cave-card{ display: flex; flex-direction: column; gap: var(--sp-2); }
+.cave-card.built{ border-color: var(--jade-dim); }
+.cave-card.built:hover{ border-color: var(--jade); box-shadow: 0 6px 20px rgba(0,0,0,0.4), 0 0 16px rgba(78,201,176,0.14); }
+.cave-card-head{ display: flex; align-items: center; gap: var(--sp-2); }
+.cave-icon{ font-size: 20px; line-height: 1; }
+.cave-card-head .zone-title{ margin-bottom: 0; flex: 1; }
+.cave-stars{ color: var(--gold-bright); font-size: 13px; letter-spacing: 1px; }
+.cave-effect{ font-size: 12px; color: var(--muted); min-height: 32px; }
+.cave-cur{ font-size: 11px; color: var(--jade); }
+.cave-maxed{ font-size: 12px; color: var(--gold-bright); font-style: italic; }
+
+/* ============ 灵宠（模块 D） ============ */
+.pet-head{
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
+  font-size: 13px; color: var(--muted);
+  padding: var(--sp-2) var(--sp-1) var(--sp-3);
+}
+.pet-head b{ color: var(--jade-bright); }
+.pet-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+.pet-card{
+  background: linear-gradient(180deg, var(--bg3), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: var(--sp-3);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.pet-card.equipped{ border-color: var(--jade); box-shadow: 0 0 12px rgba(78,201,176,0.15); }
+.pet-card-head{ display: flex; align-items: center; gap: var(--sp-2); }
+.pet-icon{ font-size: 22px; }
+.pet-name{ font-weight: 700; color: var(--ink-bright); flex: 1; font-family: var(--font-serif); }
+.pet-info{ font-size: 12px; color: var(--muted); }
+.pet-aff{ font-size: 11px; color: var(--muted-dim); }
+.pet-aff .hpbar{ height: 4px; margin-top: 3px; }
+.pet-actions{ display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: auto; }
+
+/* ============ 奇遇事件（模块 E） ============ */
+.event-modal{ max-width: 440px; }
+.event-card{ display: flex; flex-direction: column; gap: var(--sp-3); }
+.event-title{
+  font-size: 20px; font-family: var(--font-serif); font-weight: 700;
+  color: var(--gold-bright); text-shadow: 0 0 8px rgba(227,179,65,0.3);
+  text-align: center;
+}
+.event-desc{ font-size: 13px; color: var(--muted); text-align: center; line-height: 1.6; padding: 0 var(--sp-2); }
+.event-choices{ display: flex; flex-direction: column; gap: var(--sp-2); }
+.event-choice{
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  text-align: left; padding: var(--sp-2) var(--sp-3);
+}
+.event-choice b{ color: var(--ink-bright); font-size: 13px; }
+.event-choice small{ font-size: 11px; color: var(--muted); }
+
+/* ============ 炼器/铭纹（模块 F） ============ */
+.trs-item{ border-left: 3px solid var(--border); }
+.trs-item.trs-jade{ border-left-color: var(--jade); }
+.trs-item.trs-purple{ border-left-color: var(--purple); }
+.trs-item.trs-gold{ border-left-color: var(--gold); }
+.trs-item.trs-crimson{ border-left-color: var(--crimson); box-shadow: 0 0 10px rgba(248,81,73,0.1); }
+.trs-tier{ font-size: 11px; color: var(--gold-bright); border: 1px solid var(--gold-dim); border-radius: var(--r-pill); padding: 0 5px; margin-left: 4px; }
+.trs-actions{ display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+.ins-slot{ display: inline-block; width: 18px; text-align: center; font-size: 13px; color: var(--muted-dim); }
+.ins-slot.filled{ color: var(--purple); }
+.inscribe-panel{
+  width: 100%; padding: var(--sp-2) var(--sp-3);
+  font-size: 12px; color: var(--muted);
+  border-top: 1px dashed var(--border);
+  display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center;
+}
+
+/* ============ 气运/因果/卜卦（模块 G） ============ */
+.luck-chip{
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px; color: var(--muted);
+  padding: 3px 8px; border-radius: var(--r-pill);
+  border: 1px solid var(--jade-dim); cursor: pointer;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.luck-chip b{ color: var(--jade-bright); font-size: 14px; }
+.luck-chip:hover{ border-color: var(--jade); box-shadow: 0 0 8px rgba(78,201,176,0.15); }
+.luck-chip.low{ opacity: 0.5; border-color: var(--muted-dim); }
+.luck-chip.low b{ color: var(--muted); }
+.divine-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+.divine-head h2{ font-size: 18px; color: var(--jade-bright); font-family: var(--font-serif); }
+.divine-luck{ font-size: 14px; color: var(--muted); text-align: center; margin-bottom: var(--sp-2); }
+.divine-luck b{ color: var(--jade-bright); font-size: 18px; }
+.divine-karma{ display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.karma-row{ display: flex; align-items: center; gap: var(--sp-2); font-size: 12px; }
+.karma-kill{ color: var(--crimson-bright); min-width: 80px; }
+.karma-merit{ color: var(--gold-bright); min-width: 80px; }
+.karma-bar{ flex: 1; height: 6px; background: var(--bg); border-radius: var(--r-pill); overflow: hidden; }
+.karma-bar .bar.kill{ background: linear-gradient(90deg, var(--crimson-dim), var(--crimson)); height: 100%; }
+.karma-bar .bar.merit{ background: linear-gradient(90deg, var(--gold-dim), var(--gold-bright)); height: 100%; }
+
+/* ============ 三道分支（模块 H） ============ */
+.dao-choose-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-3); }
+.dao-card{ display: flex; flex-direction: column; gap: var(--sp-2); }
+.dao-card.dao-jade{ border-color: var(--jade-dim); }
+.dao-card.dao-crimson{ border-color: var(--crimson-dim); }
+.dao-card.dao-gold{ border-color: var(--gold-dim); }
+.dao-card .tab-btn{ margin-top: auto; }
+.dao-current{
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r);
+  border: 1px solid var(--border); margin-bottom: var(--sp-3);
+}
+.dao-current.dao-jade{ border-color: var(--jade); box-shadow: 0 0 10px rgba(78,201,176,0.12); }
+.dao-current.dao-crimson{ border-color: var(--crimson); box-shadow: 0 0 10px rgba(248,81,73,0.12); }
+.dao-current.dao-gold{ border-color: var(--gold); box-shadow: 0 0 10px rgba(227,179,65,0.12); }
+.dao-icon-lg{ font-size: 28px; }
+.dao-current b{ color: var(--ink-bright); font-size: 16px; font-family: var(--font-serif); }
+.dao-nodes{ display: flex; flex-direction: column; gap: var(--sp-2); }
+.dao-node{
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--bg2);
+}
+.dao-node.learned.dao-jade{ border-color: var(--jade-dim); }
+.dao-node.learned.dao-crimson{ border-color: var(--crimson-dim); }
+.dao-node.learned.dao-gold{ border-color: var(--gold-dim); }
+.dao-node b{ color: var(--ink-bright); }
+.dao-node .tab-btn{ margin-left: auto; }
+
+/* ============ 秘境深探（模块 I） ============ */
+.deep-btn{ margin-top: var(--sp-2); border-color: var(--purple-dim); color: var(--purple); }
+.deep-btn:not(:disabled):hover{ border-color: var(--purple); box-shadow: 0 0 8px rgba(163,113,247,0.18); }
+.exp-head{
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-1) var(--sp-3); font-size: 13px; color: var(--muted);
+}
+.exp-head b{ color: var(--purple); }
+.exp-head .danger-btn{ margin-left: auto; }
+.exp-rooms{ display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-3); }
+.exp-room{
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  text-align: left; padding: var(--sp-3);
+  border-color: var(--purple-dim);
+}
+.exp-room b{ color: var(--ink-bright); font-size: 14px; }
+.exp-room small{ font-size: 11px; color: var(--muted); }
+.exp-room:hover{ border-color: var(--purple); box-shadow: 0 0 10px rgba(163,113,247,0.15); }
+
+/* ============ 斗法论道（模块 J） ============ */
+.duel-head{
+  display: flex; flex-wrap: wrap; gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-1) var(--sp-3); font-size: 13px; color: var(--muted);
+}
+.duel-head b{ color: var(--gold-bright); }
+
+/* ============ 九重天劫（模块 B） ============ */
+.trib-dots{ display: flex; justify-content: center; gap: 8px; margin-bottom: var(--sp-3); }
+.trib-dot{ width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); transition: all var(--t); }
+.trib-dot.passed{ background: var(--jade-dim); border-color: var(--jade); }
+.trib-dot.current{ background: var(--crimson); border-color: var(--crimson-bright); box-shadow: 0 0 8px var(--crimson); animation: trib-pulse 1s infinite; }
+.trib-dot.pending{ opacity: 0.4; }
+@keyframes trib-pulse{ 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.3); } }
+.trib-type{ font-size: 22px; font-family: var(--font-serif); font-weight: 700; text-align: center; margin-bottom: var(--sp-1); text-shadow: 0 0 10px currentColor; }
+.trib-type.trib-purple{ color: var(--purple); }
+.trib-type.trib-crimson{ color: var(--crimson-bright); }
+.trib-type.trib-dark{ color: #8a6fc0; }
+.trib-type.trib-jade{ color: var(--jade-bright); }
+.trib-type.trib-gold{ color: var(--gold-bright); }
+.trib-wave{ text-align: center; font-size: 14px; color: var(--muted); margin-bottom: var(--sp-2); }
+.trib-preview{ font-size: 13px; color: var(--muted); text-align: center; line-height: 1.6; padding: var(--sp-2); background: var(--bg2); border-radius: var(--r); margin-bottom: var(--sp-3); }
+.trib-preview b{ color: var(--crimson-bright); }
+.trib-responses{ display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.trib-giveup{ width: 100%; }
 
 /* 响应式：小屏下调试面板占满宽度 */
 @media (max-width: 720px){
